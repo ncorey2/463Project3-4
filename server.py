@@ -15,7 +15,6 @@ chat_socket.bind((host_name, port))
 def talk_with_client(connection, address):
             try:
                 print("Recieved connection from", address[0])
-                print(connection.recv(1024).decode() + ' has connected.')
                 while True:
                     my_input = input("Send message:")
                     if("Recieved" not in my_input):

@@ -6,7 +6,6 @@ import socket
 def client_connection(name, port):
     client_socket = socket.socket() 
     client_socket.connect((name, port))
-    client_socket.send(name.encode())
     return client_socket
 
 #client sending
@@ -19,7 +18,7 @@ def client_send(socket):
 
 
 #information
-name = input('Enter Client IP address: ')
+name = input('Enter Server IP address: ')
 port = 8080
 client_socket = client_connection(name, port)
 client_send(client_socket)
