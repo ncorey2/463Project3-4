@@ -9,14 +9,15 @@ def client_connection(name, port):
     return client_socket
 
 
-def receive_messages(sock):
+def receive_messages(sock, client_name):
     """Continuously listens for incoming messages from the server."""
     try:
         while True:
             message = sock.recv(1024).decode()
             if not message:
                 break
-            print(f"\n{message}")
+            print(f"\r{message}", flush=True)
+            print(f"\r{client_name}: ", end="", flush=True)
     except Exception as e:
         print("Connection lost:", e)
 
@@ -26,7 +27,7 @@ def send_messages(sock, client_name):
     try:
         while True:
             client_input = input(f"{client_name}: ")
-            sock.send(f"{client_name}: {client_input}".encode())
+            sock.send(f"\r{client_name}: {client_input}".encode())
     except Exception as e:
         print("An error has occured:", e)
 
@@ -39,7 +40,7 @@ def client_send(sock, client_name):
     print("You can now send messages freely.\n")
 
     # Spin up one thread for receiving, one for sending
-    recv_thread = threading.Thread(target=receive_messages, args=(sock,))
+    recv_thread = threading.Thread(target=receive_messages, args=(sock, client_name))
     send_thread = threading.Thread(target=send_messages, args=(sock, client_name))
     recv_thread.daemon = True
     send_thread.daemon = True
