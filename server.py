@@ -10,7 +10,7 @@ host_name = socket.gethostname()
 s_ip = socket.gethostbyname(host_name)
 port = 8080
 chat_socket.bind((host_name, port))
-
+connectionlist = []
 
 def receive_messages(connection, client_name):
     """Continuously listens for incoming messages from the client."""
@@ -19,40 +19,47 @@ def receive_messages(connection, client_name):
             message = connection.recv(1024).decode()
             if not message:
                 break
-            print(f"\n{message}")
+            #relaying  messages to clients
+            print(f"{message}")
+            for c in connectionlist:
+                    if(c != connection):
+                        c.send(f"{message}".encode())
     except Exception as e:
         print("Connection lost:", e)
 
 
-def send_messages(connection, server_name):
-    """Continuously waits for server operator input and sends it to the client."""
-    try:
-        while True:
-            my_input = input(f"{server_name}: ")
-            connection.send(f"{server_name}: {my_input}".encode())
-    except Exception as e:
-        print("An error has occured:", e)
+
+# this isn't needed for the time being, a server isn't "sending" messages, they are relaying back to the clients
+        
+#def send_messages(connection, server_name, client_name):
+    #"""Continuously waits for server operator input and sends it to the client."""
+    #try:
+        #while True:
+            #my_input = input(f"{server_name}: ")
+            #connection.send(f"{server_name}: {my_input}\r\n".encode())
+   # except Exception as e:
+        #print("An error has occured:", e)
 
 
 def talk_with_client(connection, address):
     try:
         print("Recieved connection from", address[0])
 
+
         # Exchange names
         client_name = connection.recv(1024).decode()
         print(client_name, "has connected.")
-        server_name = input("Enter your name: ")
+        server_name = s_ip
         connection.send(server_name.encode())
 
-        print("You can now send messages freely.\n")
 
         # Spin up one thread for receiving, one for sending
         recv_thread = threading.Thread(target=receive_messages, args=(connection, client_name))
-        send_thread = threading.Thread(target=send_messages, args=(connection, server_name))
+        #send_thread = threading.Thread(target=send_messages, args=(connection, server_name, client_name))
         recv_thread.daemon = True
-        send_thread.daemon = True
+        #send_thread.daemon = True
         recv_thread.start()
-        send_thread.start()
+        #send_thread.start()
 
         # Keep this thread alive while the two above run
         recv_thread.join()
@@ -65,12 +72,18 @@ try:
     print("Welcome to Chat\n")
     print("Binding was successfull!")
     print("Your IP =", s_ip)
+    print("Chat log:")
     chat_socket.listen(5)
 
     while True:
         connection, add = chat_socket.accept()
+        connectionlist.append(connection)
         new_connection = threading.Thread(target=talk_with_client, args=(connection, add))
         new_connection.start()
 
 except Exception as e:
     print("An error has occured:", e)
+
+
+def DoNothing():
+    return 0
