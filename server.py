@@ -15,7 +15,7 @@ chat_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 host_name = socket.gethostname()
 s_ip = socket.gethostbyname(host_name)
 port = 8080
-chat_socket.bind((host_name, port))
+chat_socket.bind(('', port))
 
 # connectionlist stores dicts: {'conn': socket, 'pubkey': RSA.RsaKey, 'name': str}
 connectionlist = []
@@ -163,6 +163,13 @@ def receive_messages(connection, client_name, client_priv=None):
                         print('Failed to forward to', cinfo.get('name'), e)
     except Exception as e:
         print("Connection lost:", e)
+    finally:
+        # Remove this connection from the global list and close the socket
+        connectionlist[:] = [c for c in connectionlist if c['conn'] != connection]
+        try:
+            connection.close()
+        except Exception:
+            pass
 
 
 
@@ -176,7 +183,6 @@ def receive_messages(connection, client_name, client_priv=None):
             #connection.send(f"{server_name}: {my_input}\r\n".encode())
    # except Exception as e:
         #print("An error has occured:", e)
-    print('Connection lost:', e)
 
 def talk_with_client(connection, address):
     try:

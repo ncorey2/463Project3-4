@@ -10,9 +10,7 @@ from Crypto.Signature import pkcs1_15
 
 ## This Program acts as the Client for a "chat" room for the CSCE 463 Project 3/4
 
-# Paths for client and server keys
-CLIENT_PRIV = 'client_private.pem'
-CLIENT_PUB = 'client_public.pem'
+# Paths for server key (client paths will be per-name)
 SERVER_PUB = 'server_public.pem'
 
 
@@ -154,16 +152,18 @@ def send_messages(sock, client_name, server_pub, client_priv):
 
 
 def client_send(sock, client_name):
-    # ensure keys
-    generate_rsa_keypair(CLIENT_PRIV, CLIENT_PUB)
-    client_priv = load_private_key(CLIENT_PRIV)
+    # ensure keys (per-client files named by client_name)
+    priv_path = f'client_private_{client_name}.pem'
+    pub_path = f'client_public_{client_name}.pem'
+    generate_rsa_keypair(priv_path, pub_path)
+    client_priv = load_private_key(priv_path)
     # send name
     sock.send(client_name.encode())
     # receive server name
     server_name = sock.recv(1024).decode()
     print(f"Connected to server: {server_name}")
     # send client public key (length-prefixed)
-    with open(CLIENT_PUB, 'rb') as f:
+    with open(pub_path, 'rb') as f:
         pubpem = f.read()
     sock.sendall(struct.pack('!I', len(pubpem)))
     sock.sendall(pubpem)
