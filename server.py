@@ -248,7 +248,7 @@ if __name__ == '__main__':
         # Ensure server RSA keys exist
         generate_rsa_keypair(SERVER_PRIV, SERVER_PUB)
 
-        #Introduction to chart
+        #Introduction to chat
         print('Welcome to Chat\n')
         print('Binding was successfull!')
         print('Your IP =', s_ip)
