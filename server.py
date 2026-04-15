@@ -8,7 +8,12 @@ from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA256
 from Crypto.Signature import pkcs1_15
 
-## This Program acts as the Server for a "chat" room for the CSCE 463 Project 3/4
+"""
+This Program acts as the Server for a chat room for the CSCE 463 Project 3/4
+@authors Noah Corey, Grant Mielak, Maya Wilson
+@date 4/15/2026
+"""
+
 # Setting up the chat room
 chat_socket = socket.socket()
 chat_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -18,6 +23,7 @@ port = 8080
 chat_socket.bind(('', port))
 
 # connectionlist stores dicts: {'conn': socket, 'pubkey': RSA.RsaKey, 'name': str}
+# connectionlist is used to store all incoming connections to the server
 connectionlist = []
 
 # Paths for server keys
@@ -25,6 +31,9 @@ SERVER_PRIV = 'server_private.pem'
 SERVER_PUB = 'server_public.pem'
 
 
+"""
+Generates a public and private key for the server using the RSA library if no public and private key already exists
+"""
 def generate_rsa_keypair(priv_path, pub_path, bits=2048):
     if os.path.exists(priv_path) and os.path.exists(pub_path):
         return
@@ -35,15 +44,23 @@ def generate_rsa_keypair(priv_path, pub_path, bits=2048):
         f.write(key.publickey().export_key())
 
 
+"""
+Loads the server's private key
+"""
 def load_private_key(path):
     with open(path, 'rb') as f:
         return RSA.import_key(f.read())
 
-
+"""
+Loads the server's public key
+"""
 def load_public_key(pem_bytes):
     return RSA.import_key(pem_bytes)
 
 
+"""
+Recieves all incoming data from a client
+"""
 def recv_all(conn, n):
     data = b''
     while len(data) < n:
@@ -54,6 +71,9 @@ def recv_all(conn, n):
     return data
 
 
+"""
+Splits the recieved data from a client into the enc_sess, nonce, tag, and ciphertext
+"""
 def recv_frame(conn):
     # Read total length prefix
     raw_len = recv_all(conn, 4)
@@ -75,6 +95,9 @@ def recv_frame(conn):
     return enc_sess, nonce, tag, ciphertext
 
 
+"""
+decrypts recieved data from a client
+"""
 def decrypt_frame(enc_sess, nonce, tag, ciphertext, private_key):
     # decrypt AES key with server private RSA key
     rsa_cipher = PKCS1_OAEP.new(private_key)
@@ -84,7 +107,9 @@ def decrypt_frame(enc_sess, nonce, tag, ciphertext, private_key):
     plaintext = aes_cipher.decrypt_and_verify(ciphertext, tag)
     return plaintext
 
-
+"""
+ encrypts data with the recipients public key 
+"""
 def build_frame_for_pubkey(plaintext_bytes, recipient_pubkey):
     # generate AES key
     aes_key = get_random_bytes(32)  # AES-256
@@ -100,10 +125,11 @@ def build_frame_for_pubkey(plaintext_bytes, recipient_pubkey):
     return frame
 
 
+"""
+Continuously listens for incoming frames from the client, decrypts,
+ and rebroadcasts to other clients encrypted for each recipient.
+"""
 def receive_messages(connection, client_name, client_priv=None):
-    """Continuously listens for incoming frames from the client, decrypts,
-    and rebroadcasts to other clients encrypted for each recipient.
-    """
     try:
         server_priv = load_private_key(SERVER_PRIV)
         while True:
@@ -155,6 +181,7 @@ def receive_messages(connection, client_name, client_priv=None):
             broadcast_plain = struct.pack('!I', len(server_sig)) + server_sig + message
 
             for cinfo in connectionlist:
+                # only sends messages to clients who are not the sender
                 if cinfo['conn'] != connection:
                     try:
                         frame = build_frame_for_pubkey(broadcast_plain, cinfo['pubkey'])
@@ -172,18 +199,10 @@ def receive_messages(connection, client_name, client_priv=None):
             pass
 
 
-
-# this isn't needed for the time being, a server isn't "sending" messages, they are relaying back to the clients
-        
-#def send_messages(connection, server_name, client_name):
-    #"""Continuously waits for server operator input and sends it to the client."""
-    #try:
-        #while True:
-            #my_input = input(f"{server_name}: ")
-            #connection.send(f"{server_name}: {my_input}\r\n".encode())
-   # except Exception as e:
-        #print("An error has occured:", e)
-
+"""
+Sets up a connection with a client by recieving their public key, then storing their connection information
+and finally setting up a new thread which listens for incoming data from the client
+"""
 def talk_with_client(connection, address):
     try:
         print("Recieved connection from", address[0])
@@ -214,11 +233,8 @@ def talk_with_client(connection, address):
 
         # Spin up one thread for receiving
         recv_thread = threading.Thread(target=receive_messages, args=(connection, client_name))
-        #send_thread = threading.Thread(target=send_messages, args=(connection, server_name, client_name))
         recv_thread.daemon = True
-        #send_thread.daemon = True
         recv_thread.start()
-        #send_thread.start()
 
         # Keep this thread alive while the two above run
         recv_thread.join()
@@ -232,12 +248,14 @@ if __name__ == '__main__':
         # Ensure server RSA keys exist
         generate_rsa_keypair(SERVER_PRIV, SERVER_PUB)
 
+        #Introduction to chart
         print('Welcome to Chat\n')
         print('Binding was successfull!')
         print('Your IP =', s_ip)
         print('Chat log:')
         chat_socket.listen(5)
 
+        #Continously look for clients attempting to connect to the server
         while True:
             connection, add = chat_socket.accept()
             new_connection = threading.Thread(target=talk_with_client, args=(connection, add))
@@ -245,7 +263,3 @@ if __name__ == '__main__':
 
     except Exception as e:
         print("An error has occured:", e)
-
-
-def DoNothing():
-    return 0

@@ -8,12 +8,26 @@ from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA256
 from Crypto.Signature import pkcs1_15
 
-## This Program acts as the Client for a "chat" room for the CSCE 463 Project 3/4
+"""
+This Program represents a Client instance for a chat room for the CSCE 463 Project 3/4
+@authors Noah Corey, Grant Mielak, Maya Wilson
+@date 4/15/2026
+"""
 
 # Paths for server key (client paths will be per-name)
 SERVER_PUB = 'server_public.pem'
 
+"""
+Connects a client to the server
+"""
+def client_connection(name, port):
+    client_socket = socket.socket()
+    client_socket.connect((name, port))
+    return client_socket
 
+"""
+Generates a public and private key for a client using the RSA library if no public and private key already exists
+"""
 def generate_rsa_keypair(priv_path, pub_path, bits=2048):
     if os.path.exists(priv_path) and os.path.exists(pub_path):
         return
@@ -23,17 +37,23 @@ def generate_rsa_keypair(priv_path, pub_path, bits=2048):
     with open(pub_path, 'wb') as f:
         f.write(key.publickey().export_key())
 
-
+"""
+Loads a client's private key
+"""
 def load_private_key(path):
     with open(path, 'rb') as f:
         return RSA.import_key(f.read())
 
-
+"""
+Loads a client's public key
+"""
 def load_public_key_path(path):
     with open(path, 'rb') as f:
         return RSA.import_key(f.read())
 
-
+"""
+Recieves all incoming data from the server
+"""
 def recv_all(conn, n):
     data = b''
     while len(data) < n:
@@ -43,7 +63,9 @@ def recv_all(conn, n):
         data += packet
     return data
 
-
+"""
+Splits the recieved data from the server into the enc_sess, nonce, tag, and ciphertext
+"""
 def recv_frame(conn):
     raw_len = recv_all(conn, 4)
     if not raw_len:
@@ -60,7 +82,9 @@ def recv_frame(conn):
     ciphertext = payload[idx:idx + l4]
     return enc_sess, nonce, tag, ciphertext
 
-
+"""
+decrypts recieved data from the server
+"""
 def decrypt_frame(enc_sess, nonce, tag, ciphertext, private_key):
     rsa_cipher = PKCS1_OAEP.new(private_key)
     aes_key = rsa_cipher.decrypt(enc_sess)
@@ -69,6 +93,9 @@ def decrypt_frame(enc_sess, nonce, tag, ciphertext, private_key):
     return plaintext
 
 
+"""
+ encrypts data with the recipients public key (in this case it will always be the server)
+"""
 def build_frame_for_pubkey(plaintext_bytes, recipient_pubkey):
     aes_key = get_random_bytes(32)
     aes_cipher = AES.new(aes_key, AES.MODE_GCM)
@@ -76,20 +103,19 @@ def build_frame_for_pubkey(plaintext_bytes, recipient_pubkey):
     nonce = aes_cipher.nonce
     rsa_cipher = PKCS1_OAEP.new(recipient_pubkey)
     enc_sess = rsa_cipher.encrypt(aes_key)
+    # packing data into the structure it needs to be in: enc_ss, nonce, tag, and ciphertext
     header = struct.pack('!IIII', len(enc_sess), len(nonce), len(tag), len(ciphertext))
     payload = header + enc_sess + nonce + tag + ciphertext
     frame = struct.pack('!I', len(payload)) + payload
     return frame
 
 
-def client_connection(name, port):
-    client_socket = socket.socket()
-    client_socket.connect((name, port))
-    return client_socket
 
-
+"""
+Continuously listens for incoming messages from the server, 
+verifies server signature, and displays.
+"""
 def receive_messages(sock, client_name, client_priv, server_pub):
-    """Continuously listens for incoming messages from the server, verifies server signature, and displays."""
     try:
         while True:
             parts = recv_frame(sock)
@@ -129,9 +155,11 @@ def receive_messages(sock, client_name, client_priv, server_pub):
     except Exception as e:
         print("Connection lost:", e)
 
-
+""" 
+Continuously listens for input from a client and sends
+the data to the server
+"""
 def send_messages(sock, client_name, server_pub, client_priv):
-    """Continuously waits for user input, encrypts with server pubkey, and sends it."""
     try:
         while True:
             client_input = input(f"{client_name}: ")
@@ -150,7 +178,11 @@ def send_messages(sock, client_name, server_pub, client_priv):
     except Exception as e:
         print('An error has occured:', e)
 
-
+""" 
+Sets up a connection between the client and a server by sending the client's public key to the server used for encryption 
+and sets up a thread used to listen for incoming messages from the server,
+it also lo
+"""
 def client_send(sock, client_name):
     # ensure keys (per-client files named by client_name)
     priv_path = f'client_private_{client_name}.pem'
@@ -185,12 +217,13 @@ def client_send(sock, client_name):
     if server_pub is None:
         print('Cannot send encrypted messages without server public key.')
     else:
+        # used to send messages to the server
         send_messages(sock, client_name, server_pub, client_priv)
 
 
 # Information
 name = input('Enter Server IP address: ')
-client_name = input('Enter your name: ')
+client_name = input('\rEnter your name: ')
 port = 8080
 client_socket = client_connection(name, port)
 client_send(client_socket, client_name)
