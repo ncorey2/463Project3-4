@@ -209,7 +209,7 @@ def client_send(sock, client_name):
 
     print('You can now send messages freely.\n')
 
-    # Spin up one thread for receiving, one for sending
+    # Spin up one thread for receiving
     recv_thread = threading.Thread(target=receive_messages, args=(sock, client_name, client_priv, server_pub))
     recv_thread.daemon = True
     recv_thread.start()
