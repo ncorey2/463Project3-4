@@ -21,7 +21,7 @@ SERVER_PUB = 'server_public.pem'
 Connects a client to the server
 """
 def client_connection(name, port):
-    client_socket = socket.socket()
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((name, port))
     return client_socket
 

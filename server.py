@@ -15,7 +15,7 @@ This Program acts as the Server for a chat room for the CSCE 463 Project 3/4
 """
 
 # Setting up the chat room
-chat_socket = socket.socket()
+chat_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 chat_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 host_name = socket.gethostname()
 s_ip = socket.gethostbyname(host_name)
